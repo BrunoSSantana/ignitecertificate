@@ -1,1 +1,1 @@
-export { default as hello } from './hello.ts';
+export { default as hello } from './generateCertificate.ts';
