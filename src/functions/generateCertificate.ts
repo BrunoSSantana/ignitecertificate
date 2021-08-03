@@ -4,6 +4,7 @@ import fs from "fs";
 import handlebars from "handlebars";
 import dayjs from "dayjs";
 import chromium from "chrome-aws-lambda";
+import { S3 } from "aws-sdk";
 
 interface ICreateCertificate {
   id: string;
@@ -79,10 +80,21 @@ export const handle = async (event) => {
 
   // salvar no s3
 
+  const s3 = new S3();
+
+  await s3.putObject({
+    Bucket: "ignitecertificates3",
+    Key: `${id}.pdf`,
+    ACL: "public-read",
+    Body: pdf,
+    ContentType: "application/pdf"
+  }).promise()
+
   return {
     statusCode: 201,
     body: JSON.stringify({
-      message: "Certificate created!"
+      message: "Certificate created!",
+      url: `https://ignitecertificates3.s3.sa-east-1.amazonaws.com/${id}.pdf`
     }),
     headers: {
       "Content-type": "application/json"
