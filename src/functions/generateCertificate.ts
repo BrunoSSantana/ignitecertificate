@@ -1,8 +1,9 @@
 import { document } from "src/utils/dynamodbClient";
-import * as path from "path";
-import * as fs from "fs";
-import * as handlebars from "handlebars";
-import * as dayjs from "dayjs";
+import path from "path";
+import fs from "fs";
+import handlebars from "handlebars";
+import dayjs from "dayjs";
+import chromium from "chrome-aws-lambda";
 
 interface ICreateCertificate {
   id: string;
@@ -27,7 +28,7 @@ const compile = async function (data: ITemplate) {
 }
 
 export const handle = async (event) => {
-  const { id, name, grade } = JSON.parse(event.body) as ICreateCertificate;
+  const { id, name, grade } = JSON.parse(event.body) as ICreateCertificate
 
   await document.put({
     TableName: "users_certificates",
@@ -39,7 +40,7 @@ export const handle = async (event) => {
   })
   .promise();
 
-  const medalPath = path.join(process.cwd(), "src", "Templates", "selo.pbg");
+  const medalPath = path.join(process.cwd(), "src", "templates", "selo.png");
   const medal = fs.readFileSync(medalPath, "base64")
 
   const data: ITemplate = {
@@ -54,6 +55,28 @@ export const handle = async (event) => {
   // compilar usando handlebars
   const content = await compile(data);
   // transformar em pdf
+
+  const browser = await chromium.puppeteer.launch({
+    headless: true,
+    args: chromium.args,
+    defaultViewport: chromium.defaultViewport,
+    executablePath: await chromium.executablePath, 
+  });
+
+  const page = await  browser.newPage();
+
+  await page.setContent(content);
+
+  const pdf = await page.pdf({
+    format: "a4",
+    landscape: true,
+    path: process.env.IS_OFFLINE ? "certificate.pdf" : null,
+    printBackground: true,
+    preferCSSPageSize: true,
+  });
+
+  browser.close();
+
   // salvar no s3
 
   return {
